@@ -9,7 +9,7 @@ from time import sleep # функция для создания паузы в в
 import talk2telegramapi # модуль с функциями общения с API Telegram
 import fiitinfo  # Модуль с информацией по группе Фиит
 
-def w_2_json(source_file, source_list):
+def write_2_json(source_file, source_list):
 	try:
 		with open(source_file, 'w', encoding='utf-8') as ID_List:
 	  		ID_List.write(json.dumps(source_list, ensure_ascii=False))
@@ -33,17 +33,17 @@ def read_f_json(source_file):
 			fiit_dictionary.update({'schedule':fiitinfo.schedule_up})
 			fiit_dictionary.update({'last_upd_id':1})
 			fiit_dictionary.update({'init_week':False})
-			w_2_json('fiit_dictionary.json', fiit_dictionary)
+			write_2_json('fiit_dictionary.json', fiit_dictionary)
 			source_list = fiit_dictionary
 		if source_list == 'PD_mehmat.json':
-			print()#do smth"""
+			#do smth in progress"""
 	return source_list
 
 # Функция команды schedule_init
 def do_schedule_init(chat_id,fiit_dictionary):
     if chat_id not in fiit_dictionary['schedule_chat_list']:
         fiit_dictionary['schedule_chat_list'].append(chat_id)
-        w_2_json('fiit_dictionary.json', fiit_dictionary)
+        write_2_json('fiit_dictionary.json', fiit_dictionary)
         talk2telegramapi.send_message(chat_id,'Ваш чат добавлен в список рассылки.')
     else:
         talk2telegramapi.send_message(chat_id,'Ваш чат уже есть в списке рассылки.')
@@ -53,7 +53,7 @@ def do_schedule_init(chat_id,fiit_dictionary):
 def do_schedule_stop(chat_id, fiit_dictionary):
 	if chat_id in fiit_dictionary['schedule_chat_list']:
 		fiit_dictionary['schedule_chat_list'].remove(chat_id)
-		w_2_json('fiit_dictionary.json', fiit_dictionary)
+		write_2_json('fiit_dictionary.json', fiit_dictionary)
 		talk2telegramapi.send_message(chat_id,'Ваш чат удалён из списка рассылки.')
 	else:
 		talk2telegramapi.send_message(chat_id,'Вашего чата нет в списке рассылки.')
@@ -63,14 +63,14 @@ def do_schedule_stop(chat_id, fiit_dictionary):
 # Функция команды init_up
 def do_init_up(chat_id):
     talk2telegramapi.send_message(chat_id,'Теперь неделя верхняя.')
-    return fiitinfo.schedule_up, 'up'
+    return fiitinfo.schedule_up
     # необходима авторизация изменения верх. ниж. недели
 
 
 # Функция команды init_down
 def do_init_down(chat_id):
     talk2telegramapi.send_message(chat_id,'Теперь неделя нижняя.')
-    return fiitinfo.schedule_down, 'down'
+    return fiitinfo.schedule_down
     # необходима авторизация изменения верх. ниж. недели
 
 
@@ -112,19 +112,21 @@ dict_of_commands = {
 if os.path.exists('fiit_dictionary.json'):
     fiit_dictionary = read_f_json('fiit_dictionary.json')
     fiit_dictionary['restart_inc'] = fiit_dictionary['restart_inc'] + 1
-    w_2_json('fiit_dictionary.json', fiit_dictionary)
-    schedule = fiitinfo.schedule_down
+    write_2_json('fiit_dictionary.json', fiit_dictionary)
+	if fiit_dictionary['updown'] == 'up':
+		schedule = fiitinfo.schedule_up
+	elif fiit_dictionary['updown'] == 'down':
+		schedule = fiitinfo.schedule_down
 else:
     fiit_dictionary = {}
     fiit_dictionary.update({'updown':'up'})
     fiit_dictionary.update({'schedule_chat_list':[]})
     fiit_dictionary.update({'send_schedule_bool':False})
-    #fiit_dictionary.update({'schedule':fiitinfo.schedule_up})
     fiit_dictionary.update({'last_upd_id':1})
     fiit_dictionary.update({'init_week':False})
     fiit_dictionary.update({'restart_inc':1})
-    schedule = fiitinfo.schedule_down
-    w_2_json('fiit_dictionary.json', fiit_dictionary)
+    schedule = fiitinfo.schedule_up
+    write_2_json('fiit_dictionary.json', fiit_dictionary)
 
 
 
@@ -143,13 +145,13 @@ def main():
                 fiit_dictionary['schedule'] = fiitinfo.schedule_down
                 fiit_dictionary['init_week'] = True
                 schedule = fiitinfo.schedule_down
-                w_2_json('fiit_dictionary.json',fiit_dictionary)
+                write_2_json('fiit_dictionary.json',fiit_dictionary)
             elif fiit_dictionary['updown']=='down':
                 fiit_dictionary['updown'] = 'up'
                 fiit_dictionary['schedule'] = fiitinfo.schedule_up
                 fiit_dictionary['init_week'] = True
                 schedule = fiitinfo.schedule_up
-                w_2_json('fiit_dictionary.json',fiit_dictionary)
+                write_2_json('fiit_dictionary.json',fiit_dictionary)
         # Переманная текущего дня и времени по Москве
         now = datetime.datetime.now(servertz)
 
@@ -170,7 +172,7 @@ def main():
                 continue
             else:# Если нет, то обновляем значение последнего update_id и выполняем последующие команды
                 fiit_dictionary['last_upd_id'] = message['update_id']
-                w_2_json('fiit_dictionary.json', fiit_dictionary)
+                write_2_json('fiit_dictionary.json', fiit_dictionary)
 
             # Присваиваем переменным значения из вновь пришедшего сообщения
             msg_text = message['text']
@@ -188,14 +190,14 @@ def main():
 
                 # Инизиализация типа недели
                 elif (msg_text == '/init_up' or msg_text == '/init_up@FiitRndBot'):
-                    schedule, fiit_dictionary['updown'] = do_init_up(msg_chat_id)
+                    schedule = do_init_up(msg_chat_id)
                     fiit_dictionary['updown'] = 'up'
-                    w_2_json('fiit_dictionary.json',fiit_dictionary)
+                    write_2_json('fiit_dictionary.json',fiit_dictionary)
 
                 elif (msg_text == '/init_down' or msg_text == '/init_down@FiitRndBot'):
                     schedule, fiit_dictionary['updown'] = do_init_down(msg_chat_id)
                     fiit_dictionary['updown'] = 'down'
-                    w_2_json('fiit_dictionary.json',fiit_dictionary)
+                    write_2_json('fiit_dictionary.json',fiit_dictionary)
 
                 #  Отправляем информацию о Деканате
                 elif (msg_text == '/dean'  or msg_text =='/dean@FiitRndBot'):
@@ -256,7 +258,7 @@ def main():
                 talk2telegramapi.send_message(i, 'Неделя = '+fiit_dictionary['updown'])
                 talk2telegramapi.send_message(i, ','.join(schedule[now.weekday()]))
             fiit_dictionary['send_schedule_bool'] = True
-            w_2_json('fiit_dictionary.json',fiit_dictionary)
+            write_2_json('fiit_dictionary.json',fiit_dictionary)
 
 
 
